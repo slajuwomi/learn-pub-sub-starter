@@ -25,6 +25,11 @@ func main() {
 		fmt.Println("Channel creation failed", err)
 	}
 
+	_, _, err = pubsub.DeclareAndBind(con, routing.ExchangePerilTopic, routing.GameLogSlug, routing.GameLogSlug+".*", "durable")
+	if err != nil {
+		fmt.Println("Failed to declare and bind queue: ", err)
+	}
+
 	gamelogic.PrintServerHelp()
 	for {
 		userInput := gamelogic.GetInput()
