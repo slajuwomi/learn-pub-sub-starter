@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -25,19 +24,43 @@ func main() {
 		fmt.Println("Failed to get username: ", err)
 	}
 
-	sigs := make(chan os.Signal, 1)
+	_, _, err = pubsub.DeclareAndBind(con, routing.ExchangePerilDirect, fmt.Sprintf(routing.PauseKey+"."+username), routing.PauseKey, "transient")
+	if err != nil {
+		fmt.Println("Failed to declare and bind queue: ", err)
+	}
 
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	gameState := gamelogic.NewGameState(username)
+	for {
+		userInput := gamelogic.GetInput()
+		if userInput == nil {
+			continue
+		}
 
-	done := make(chan bool, 1)
-
-	go func() {
-		sig := <-sigs
-		fmt.Println(sig)
-		done <- true
-	}()
-
-	<-done
-	fmt.Println("Program is shutting down...")
-
+		firstWord := userInput[0]
+		switch firstWord {
+		case "spawn":
+			err = gameState.CommandSpawn(userInput)
+			if err != nil {
+				fmt.Println("Spawning failed: ", err)
+			}
+		case "move":
+			_, err := gameState.CommandMove(userInput)
+			if err != nil {
+				fmt.Println("Failed to move: ", err)
+			} else {
+				fmt.Println("Move successful!")
+			}
+		case "status":
+			gameState.CommandStatus()
+		case "help":
+			gamelogic.PrintClientHelp()
+		case "spam":
+			fmt.Println("Spamming not allowed yet!")
+		case "quit":
+			gamelogic.PrintQuit()
+			return
+		default:
+			fmt.Println("Invalid command")
+		}
+	}
 }
