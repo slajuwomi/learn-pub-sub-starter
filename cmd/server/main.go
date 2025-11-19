@@ -42,10 +42,16 @@ func main() {
 		switch firstWord {
 		case "pause":
 			fmt.Println("Sending a pause message")
-			pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
+			err = pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
+			if err != nil {
+				fmt.Println("Failed to send pause message: ", err)
+			}
 		case "resume":
 			fmt.Println("Sending a resume message")
-			pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: false})
+			err = pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: false})
+			if err != nil {
+				fmt.Println("Failed to send resume message: ", err)
+			}
 		case "quit":
 			fmt.Println("Exiting")
 			return
