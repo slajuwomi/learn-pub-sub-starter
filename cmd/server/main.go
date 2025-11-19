@@ -24,6 +24,7 @@ func main() {
 	if err != nil {
 		fmt.Println("Channel creation failed", err)
 	}
+	// FAKE
 
 	_, _, err = pubsub.DeclareAndBind(con, routing.ExchangePerilTopic, routing.GameLogSlug, routing.GameLogSlug+".*", "durable")
 	if err != nil {
