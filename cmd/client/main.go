@@ -24,14 +24,19 @@ func main() {
 		fmt.Println("Failed to get username: ", err)
 	}
 
-	_, _, err = pubsub.DeclareAndBind(con, routing.ExchangePerilDirect, fmt.Sprintf(routing.PauseKey+"."+username), routing.PauseKey, "transient")
+	chann, _, err := pubsub.DeclareAndBind(con, routing.ExchangePerilDirect, fmt.Sprintf(routing.PauseKey+"."+username), routing.PauseKey, "transient")
 	if err != nil {
 		fmt.Println("Failed to declare and bind queue: ", err)
 	}
 
 	gameState := gamelogic.NewGameState(username)
 
-	err = pubsub.SubscribeJSON(con, routing.ExchangePerilDirect, fmt.Sprintf(routing.PauseKey+"."+username), routing.PauseKey, "transient", handlerPause(gameState))
+	_, err = pubsub.SubscribeJSON(con, routing.ExchangePerilDirect, fmt.Sprintf(routing.PauseKey+"."+username), routing.PauseKey, "transient", handlerPause(gameState))
+	if err != nil {
+		fmt.Println("Failed to subscribe: ", err)
+	}
+
+	_, err = pubsub.SubscribeJSON(con, routing.ExchangePerilTopic, fmt.Sprintf(routing.ArmyMovesPrefix+"."+username), fmt.Sprintf(routing.ArmyMovesPrefix+"."+"*"), "transient", handlerMove(gameState))
 	if err != nil {
 		fmt.Println("Failed to subscribe: ", err)
 	}
@@ -50,11 +55,16 @@ func main() {
 				fmt.Println("Spawning failed: ", err)
 			}
 		case "move":
-			_, err := gameState.CommandMove(userInput)
+			move, err := gameState.CommandMove(userInput)
 			if err != nil {
 				fmt.Println("Failed to move: ", err)
 			} else {
-				fmt.Println("Move successful!")
+				err = pubsub.PublishJSON(chann, routing.ExchangePerilTopic, fmt.Sprintf(routing.ArmyMovesPrefix+"."+username), move)
+				if err != nil {
+					fmt.Println("Move unsuccessful! ", err)
+				} else {
+					fmt.Println("Move successful!")
+				}
 			}
 		case "status":
 			gameState.CommandStatus()
