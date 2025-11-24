@@ -31,12 +31,12 @@ func main() {
 
 	gameState := gamelogic.NewGameState(username)
 
-	_, err = pubsub.SubscribeJSON(con, routing.ExchangePerilDirect, fmt.Sprintf(routing.PauseKey+"."+username), routing.PauseKey, "transient", handlerPause(gameState))
+	err = pubsub.SubscribeJSON(con, routing.ExchangePerilDirect, fmt.Sprintf(routing.PauseKey+"."+username), routing.PauseKey, "transient", handlerPause(gameState))
 	if err != nil {
 		fmt.Println("Failed to subscribe: ", err)
 	}
 
-	_, err = pubsub.SubscribeJSON(con, routing.ExchangePerilTopic, fmt.Sprintf(routing.ArmyMovesPrefix+"."+username), fmt.Sprintf(routing.ArmyMovesPrefix+"."+"*"), "transient", handlerMove(gameState))
+	err = pubsub.SubscribeJSON(con, routing.ExchangePerilTopic, fmt.Sprintf(routing.ArmyMovesPrefix+"."+username), fmt.Sprintf(routing.ArmyMovesPrefix+"."+"*"), "transient", handlerMove(gameState))
 	if err != nil {
 		fmt.Println("Failed to subscribe: ", err)
 	}

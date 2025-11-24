@@ -12,6 +12,6 @@ func handlerPause(gs *gamelogic.GameState) func(routing.PlayingState) pubsub.Ack
 	return func(ps routing.PlayingState) pubsub.Acktype {
 		defer fmt.Print("> ")
 		gs.HandlePause(ps)
-		return "Ack"
+		return pubsub.Ack
 	}
 }
