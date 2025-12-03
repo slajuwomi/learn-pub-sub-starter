@@ -31,6 +31,11 @@ func main() {
 		fmt.Println("Failed to declare and bind queue: ", err)
 	}
 
+	err = pubsub.SubscribeGob(con, routing.ExchangePerilTopic, routing.GameLogSlug, routing.GameLogSlug+".*", "durable", handlerLogs())
+	if err != nil {
+		fmt.Println("Failed to subscribe to game log queue: ", err)
+	}
+
 	gamelogic.PrintServerHelp()
 	for {
 		userInput := gamelogic.GetInput()

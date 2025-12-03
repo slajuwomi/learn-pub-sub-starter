@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
@@ -36,7 +37,10 @@ func main() {
 		fmt.Println("Failed to subscribe: ", err)
 	}
 
-	err = pubsub.SubscribeJSON(con, routing.ExchangePerilTopic, fmt.Sprintf(routing.ArmyMovesPrefix+"."+username), fmt.Sprintf(routing.ArmyMovesPrefix+"."+"*"), "transient", handlerMove(gameState))
+	err = pubsub.SubscribeJSON(con, routing.ExchangePerilTopic, fmt.Sprintf(routing.ArmyMovesPrefix+"."+username), fmt.Sprintf(routing.ArmyMovesPrefix+"."+"*"), "transient", handlerMove(gameState, chann, username))
+
+	err = pubsub.SubscribeJSON(con, routing.ExchangePerilTopic, routing.WarRecognitionsPrefix, fmt.Sprintf(routing.WarRecognitionsPrefix+"."+"*"), "durable", handlerWarMessages(gameState, chann))
+
 	if err != nil {
 		fmt.Println("Failed to subscribe: ", err)
 	}
@@ -71,7 +75,21 @@ func main() {
 		case "help":
 			gamelogic.PrintClientHelp()
 		case "spam":
-			fmt.Println("Spamming not allowed yet!")
+			if userInput[1] != "" {
+				numberOfSpams, err := strconv.Atoi(userInput[1])
+				if err != nil {
+					fmt.Println("Failed to convert spam number: ", err)	
+					return
+				}
+				for i :=0; i < numberOfSpams; i++ {
+					maliciousLogMessage := gamelogic.GetMaliciousLog()
+					err := pubsub.PublishJSON(chann, routing.ExchangePerilTopic, routing.GameLogSlug+"."+username, maliciousLogMessage)
+					if err != nil {
+						fmt.Println("Failed to publish spam to game logs: ", err)
+						return
+					}
+				}
+			}
 		case "quit":
 			gamelogic.PrintQuit()
 			return
