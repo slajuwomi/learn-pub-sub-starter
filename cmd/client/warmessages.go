@@ -22,31 +22,50 @@ func handlerWarMessages(gs *gamelogic.GameState, publishCh *amqp.Channel) func(g
 		case gamelogic.WarOutcomeNoUnits:
 			thisAcktype = pubsub.NackDiscard
 		case gamelogic.WarOutcomeOpponentWon:
-			message := fmt.Sprintf("%v won a war against %v\n", winner, loser)
-			fmt.Println(message)
-			thisAcktype = PublishGameLog(publishCh, message, rw.Attacker.Username)
+			// message := fmt.Sprintf("%v won a war against %v\n", winner, loser)
+			// fmt.Println(message)
+			err := PublishGameLog(publishCh, fmt.Sprintf("%v won a war against %v\n", winner, loser), gs.GetUsername())
+			if err != nil {
+				fmt.Printf("error: %s\n", err)
+				return pubsub.NackRequeue
+			}
+			// thisAcktype = PublishGameLog(publishCh, message, rw.Attacker.Username)
+			return pubsub.Ack
 		case gamelogic.WarOutcomeDraw:
-			message := fmt.Sprintf("A war between %v and %v resulted in a draw\n", winner, loser)
-			fmt.Println(message)
-			thisAcktype = PublishGameLog(publishCh, message, rw.Attacker.Username)
+			// message := fmt.Sprintf("A war between %v and %v resulted in a draw\n", winner, loser)
+			// fmt.Println(message)
+			err := PublishGameLog(publishCh, fmt.Sprintf("A war between %v and %v resulted in a draw\n", winner, loser), gs.GetUsername())
+			if err != nil {
+				fmt.Printf("error: %s\n", err)
+				return pubsub.NackRequeue
+			}
+			// thisAcktype = PublishGameLog(publishCh, message, rw.Attacker.Username)
+			return pubsub.Ack
 		case gamelogic.WarOutcomeYouWon:
-			fmt.Printf("%v won a war against %v\n", winner, loser)
+			err := PublishGameLog(publishCh, fmt.Sprintf("%v won a war against %v", winner, loser), gs.GetUsername())
+			if err != nil {
+				fmt.Printf("error: %s\n", err)
+				return pubsub.NackRequeue
+			}
+			return pubsub.Ack
 		default:
 			fmt.Println("Failed to get vaild war outcome")
 			thisAcktype = pubsub.NackDiscard
 		}
+		fmt.Println("error: unkonwn war outcome")
 		return thisAcktype
 	}
 }
 
-func PublishGameLog(ch *amqp091.Channel, message, username string) pubsub.Acktype {
-	var newGameLog routing.GameLog
-	newGameLog.CurrentTime = time.Now()
-	newGameLog.Message = message
-	newGameLog.Username = username
-	err := pubsub.PublishGob(ch, routing.ExchangePerilTopic, routing.GameLogSlug+"."+username, newGameLog)
-	if err != nil {
-		return pubsub.NackRequeue
-	}
-	return pubsub.Ack
+func PublishGameLog(ch *amqp091.Channel, message, username string) error {
+	return pubsub.PublishGob(
+		ch,
+		routing.ExchangePerilTopic,
+		routing.GameLogSlug+"."+username,
+		routing.GameLog{
+			Username:    username,
+			CurrentTime: time.Now(),
+			Message:     message,
+		},
+	)
 }

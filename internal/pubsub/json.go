@@ -36,6 +36,10 @@ func SubscribeJSON[T any](conn *amqp.Connection, exchange, queueName, key string
 	if err != nil {
 		return fmt.Errorf("failed to bind queue to exchange: %v", err)
 	}
+	err = chann.Qos(10, 0, false)
+	if err != nil {
+		return fmt.Errorf("failed to qos: %v", err)
+	}
 	deliveryChannel, err := chann.Consume(queue.Name, "", false, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("failed to start consumption: %v", err)
@@ -75,14 +79,14 @@ func SubscribeJSON[T any](conn *amqp.Connection, exchange, queueName, key string
 	return nil
 }
 
-func PublishGob[T any](ah *amqp.Channel, exchange, key string, val T) error {
+func PublishGob[T any](ch *amqp.Channel, exchange, key string, val T) error {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
 	err := encoder.Encode(val)
 	if err != nil {
 		return fmt.Errorf("failed to encode to gob: %v", err)
 	}
-	return ah.PublishWithContext(context.Background(), exchange, key, false, false, amqp.Publishing{
+	return ch.PublishWithContext(context.Background(), exchange, key, false, false, amqp.Publishing{
 		ContentType: "application/gob",
 		Body:        buffer.Bytes(),
 	})
@@ -92,6 +96,10 @@ func SubscribeGob[T any](conn *amqp.Connection, exchange, queueName, key string,
 	chann, queue, err := DeclareAndBind(conn, exchange, queueName, key, queueType)
 	if err != nil {
 		return fmt.Errorf("failed to bind queue to exchange: %v", err)
+	}
+	err = chann.Qos(10, 0, false)
+	if err != nil {
+		return fmt.Errorf("failed to qos: %v", err)
 	}
 	deliveryChannel, err := chann.Consume(queue.Name, "", false, false, false, false, nil)
 	if err != nil {
@@ -107,7 +115,9 @@ func SubscribeGob[T any](conn *amqp.Connection, exchange, queueName, key string,
 
 			err = decoder.Decode(&decoded)
 			if err != nil {
-				return err
+				fmt.Printf("Error decoding message: %v/n", err)
+				delivery.Nack(false, false)
+				continue
 			}
 			switch handler(decoded) {
 			case Ack:

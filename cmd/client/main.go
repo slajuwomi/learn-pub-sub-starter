@@ -78,12 +78,15 @@ func main() {
 			if userInput[1] != "" {
 				numberOfSpams, err := strconv.Atoi(userInput[1])
 				if err != nil {
-					fmt.Println("Failed to convert spam number: ", err)	
+					fmt.Println("Failed to convert spam number: ", err)
 					return
 				}
-				for i :=0; i < numberOfSpams; i++ {
+				for range numberOfSpams {
 					maliciousLogMessage := gamelogic.GetMaliciousLog()
-					err := pubsub.PublishJSON(chann, routing.ExchangePerilTopic, routing.GameLogSlug+"."+username, maliciousLogMessage)
+					err := PublishGameLog(chann, maliciousLogMessage, username)
+					// if err != nil {
+					// 	fmt.Printf("error publishing malicious log: %s\n", err)
+					// }
 					if err != nil {
 						fmt.Println("Failed to publish spam to game logs: ", err)
 						return
